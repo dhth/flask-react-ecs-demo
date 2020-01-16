@@ -3,7 +3,7 @@ version: 0.2
 env:
   variables:
     AWS_REGION: "us-east-1"
-    REACT_APP_USERS_SERVICE_URL: "http://localhost:5001"
+    REACT_APP_USERS_SERVICE_URL: "http://experimental-flask-react-alb-152906246.us-east-1.elb.amazonaws.com"
 
 phases:
   install:
@@ -13,22 +13,36 @@ phases:
     commands:
       - echo logging in to ecr...
       - $(aws ecr get-login --no-include-email --region $AWS_REGION)
+      - docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/experimental-flask-react-users:prod || true
+      - docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/experimental-flask-react-client:builder || true
+      - docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/experimental-flask-react-client:prod || true
   build:
     commands:
-      - echo building images...
+      - echo building prod images...
       - >
         docker build \
+          --cache-from $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/experimental-flask-react-users:prod \
           -f services/users/Dockerfile.prod \
           -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/experimental-flask-react-users:prod \
           ./services/users
       - >
         docker build \
+          --target builder \
+          --cache-from $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/experimental-flask-react-client:builder \
           -f services/client/Dockerfile.prod \
-          -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/experimental-flask-react-client:prod \
+          -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/experimental-flask-react-client:builder \
           --build-arg NODE_ENV=production \
           --build-arg REACT_APP_USERS_SERVICE_URL=$REACT_APP_USERS_SERVICE_URL \
           ./services/client
+      - >
+        docker build \
+          --cache-from $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/experimental-flask-react-client:prod \
+          -f services/client/Dockerfile.prod \
+          -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/experimental-flask-react-client:prod \
+          ./services/client
   post_build:
     commands:
+    - echo pushing prod images to ecr...
     - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/experimental-flask-react-users:prod
+    - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/experimental-flask-react-client:builder
     - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/experimental-flask-react-client:prod
