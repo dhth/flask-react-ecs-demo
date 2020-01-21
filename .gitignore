@@ -3,3 +3,4 @@ env
 .coverage
 htmlcov
 node_modules
+local_only*
