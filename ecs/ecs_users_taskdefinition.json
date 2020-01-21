@@ -33,7 +33,7 @@
         "logConfiguration": {
           "logDriver": "awslogs",
           "options": {
-            "awslogs-group": "experimental-flask-react-users-log",
+            "awslogs-group": "/ecs/experimental-flask-react-users-td-1",
             "awslogs-region": "us-east-1"
           }
         }
